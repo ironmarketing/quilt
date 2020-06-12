@@ -12,8 +12,8 @@ These libraries compose together to help you create performant modern JS apps th
 
 ## Usage
 
-The Quilt repo is managed as a monorepo that is composed of many npm packages.
-Each package has its own `README.md` and documentation describing usage.
+The Quilt repo is managed as a monorepo that is composed of 70 npm packages and one Ruby gem.
+Each package/gem has its own `README.md` and documentation describing usage.
 
 ### Package Index
 
