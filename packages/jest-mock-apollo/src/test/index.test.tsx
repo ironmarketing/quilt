@@ -3,17 +3,19 @@ import path from 'path';
 
 import React from 'react';
 import {ApolloClient} from 'apollo-client';
-import {graphql} from '@apollo/react-hoc';
+import {useQuery, useMutation} from '@apollo/react-hooks';
 import {ApolloProvider} from '@apollo/react-common';
 import {buildSchema} from 'graphql';
 import {createMount} from '@shopify/react-testing';
 
 import unionOrIntersectionTypes from './fixtures/schema-unions-and-interfaces.json';
-import petQuery from './fixtures/PetQuery.graphql';
+import {
+  Pet as petQuery,
+  PetMutation as petMutation,
+} from './fixtures/PetQuery.graphql';
 
 import configureClient from '..';
 
-// setup
 const schemaSrc = readFileSync(
   path.resolve(__dirname, './fixtures/schema.graphql'),
   'utf8',
@@ -30,35 +32,56 @@ const mount = createMount<{client: ApolloClient<any>}, {}>({
   },
 });
 
-interface Props {
-  data?: {
-    loading?: boolean;
-    pets?: any[];
-    error?: any;
-  };
-}
-
-// mock Component
-function SomePageBase(props: Props) {
-  if (!props.data) {
-    return null;
-  }
+function SomePage() {
   const {
-    data: {loading = true, pets, error},
-  } = props;
-  const errorMessage = error ? <p>{error.message}</p> : null;
+    data: {pets: queryData} = {pets: []},
+    error: queryError = {message: ''},
+    loading: queryLoading = true,
+  } = useQuery(petQuery);
+  const [
+    mutate,
+    {
+      data: {pets: mutationData} = {pets: []},
+      error: mutationError = {message: ''},
+      loading: mutationLoading = true,
+    },
+  ] = useMutation(petMutation);
 
-  const loadingMarkup = loading ? 'Loading' : 'Loaded!';
-  const petsMarkup = pets && pets.length ? pets[0].name : 'No pets';
+  const errorMarkup = `${queryError.message} ${mutationError.message}`;
+  const loadingMarkup = queryLoading || mutationLoading ? 'Loading' : 'Loaded!';
+  const pets = [...queryData, ...mutationData];
+  const petsMarkup =
+    pets && pets.length ? pets.map(pets => pets.name).join(', ') : 'No pets';
+
   return (
     <>
       <p>{loadingMarkup}</p>
       <p>{petsMarkup}</p>
-      {errorMessage}
+      <p>{errorMarkup}</p>
+      <button
+        type="submit"
+        onClick={async () => {
+          try {
+            await mutate({variables: {name: 'Sophie'}});
+          } catch (error) {
+            return undefined;
+          }
+        }}
+      >
+        Mutate
+      </button>
     </>
   );
 }
-const SomePage = graphql(petQuery)(SomePageBase);
+
+async function clickButton(wrapper, graphQLClient = client) {
+  wrapper.find('button', {type: 'submit'}).trigger('onClick');
+  await waitToResolve(wrapper, graphQLClient);
+}
+
+async function waitToResolve(wrapper, graphQLClient = client) {
+  await wrapper.act(() => Promise.all(graphQLClient.graphQLResults));
+}
 
 const client = createGraphQLClient({
   Pet: {
@@ -69,6 +92,14 @@ const client = createGraphQLClient({
       },
     ],
   },
+  PetMutation: ({variables: {name}}) => ({
+    pets: [
+      {
+        __typename: 'Cat',
+        name,
+      },
+    ],
+  }),
 });
 
 describe('jest-mock-apollo', () => {
@@ -76,23 +107,86 @@ describe('jest-mock-apollo', () => {
     const client = createGraphQLClient();
     const somePage = mount(<SomePage />, {client});
 
-    await somePage.act(() => Promise.all(client.graphQLRequests));
+    await waitToResolve(somePage, client);
 
     expect(somePage).toContainReactText(
       "GraphQL error: Can’t perform GraphQL operation 'Pet' because no mocks were set.",
     );
   });
 
-  it('resolves mock query and renders data', async () => {
-    const somePage = mount(<SomePage />, {
-      client,
+  describe('queries', () => {
+    it('resolves mock query and renders data', async () => {
+      const somePage = mount(<SomePage />, {
+        client,
+      });
+
+      await waitToResolve(somePage, client);
+
+      const query = client.graphQLRequests.lastOperation('Pet');
+
+      expect(query).toMatchObject({operationName: 'Pet'});
+      expect(somePage).toContainReactText('Garfield');
     });
 
-    await somePage.act(() => Promise.all(client.graphQLRequests));
+    it('throws useful error when query is not mocked', async () => {
+      const client = createGraphQLClient({
+        PetMutation: ({variables: {name}}) => ({
+          pets: [
+            {
+              __typename: 'Cat',
+              name,
+            },
+          ],
+        }),
+      });
+      const somePage = mount(<SomePage />, {
+        client,
+      });
 
-    const query = client.graphQLRequests.lastOperation('Pet');
-    expect(query).toMatchObject({operationName: 'Pet'});
+      await waitToResolve(somePage, client);
 
-    expect(somePage).toContainReactText('Garfield');
+      expect(somePage).toContainReactText(
+        "GraphQL error: Can’t perform GraphQL operation 'Pet' because no valid mocks were found",
+      );
+    });
+  });
+
+  describe('mutations', () => {
+    it('resolves mock mutation', async () => {
+      const somePage = mount(<SomePage />, {
+        client,
+      });
+
+      await waitToResolve(somePage, client);
+      await clickButton(somePage, client);
+
+      const query = client.graphQLRequests.lastOperation('PetMutation');
+
+      expect(query).toMatchObject({operationName: 'PetMutation'});
+      expect(somePage).toContainReactText('Garfield, Sophie');
+    });
+
+    it('throws useful error when mutation is not mocked', async () => {
+      const client = createGraphQLClient({
+        Pet: {
+          pets: [
+            {
+              __typename: 'Cat',
+              name: 'Garfield',
+            },
+          ],
+        },
+      });
+      const somePage = mount(<SomePage />, {
+        client,
+      });
+
+      await waitToResolve(somePage, client);
+      await clickButton(somePage, client);
+
+      expect(somePage).toContainReactText(
+        "GraphQL error: Can’t perform GraphQL operation 'PetMutation' because no valid mocks were found",
+      );
+    });
   });
 });

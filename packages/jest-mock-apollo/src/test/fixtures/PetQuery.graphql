@@ -4,6 +4,12 @@ query Pet {
   }
 }
 
+mutation PetMutation($name: String!) {
+  pets {
+    ...CatInfo
+  }
+}
+
 fragment CatInfo on Cat {
   name
 }

@@ -25,7 +25,7 @@ const mockRequest = {
 };
 
 describe('MockApolloLink', () => {
-  it('returns error message with empty mock object', async () => {
+  it('returns GraphQLError with empty mock object', async () => {
     const mockApolloLink = new MockApolloLink({}, schema);
 
     const result = await new Promise(resolve => {
@@ -33,12 +33,15 @@ describe('MockApolloLink', () => {
     });
 
     expect(result).toMatchObject({
-      message:
-        "Can’t perform GraphQL operation 'Pets' because no valid mocks were found (it looks like you tried to provide data directly to the mock GraphQL client. You need to provide your fixture on the key that matches its operation name. To fix this, simply change your code to read 'mockGraphQLClient({Pets: yourFixture}).'",
+      errors: [
+        new GraphQLError(
+          "Can’t perform GraphQL operation 'Pets' because no valid mocks were found (it looks like you tried to provide data directly to the mock GraphQL client. You need to provide your fixture on the key that matches its operation name. To fix this, simply change your code to read 'mockGraphQLClient({Pets: yourFixture}).'",
+        ),
+      ],
     });
   });
 
-  it('returns error message when there are no matching mocks', async () => {
+  it('returns GraphQLError when there are no matching mocks', async () => {
     const mockApolloLink = new MockApolloLink(
       {LostPets: {}, PetsForSale: {}},
       schema,
@@ -49,12 +52,15 @@ describe('MockApolloLink', () => {
     });
 
     expect(result).toMatchObject({
-      message:
-        "Can’t perform GraphQL operation 'Pets' because no valid mocks were found (you provided an object that had mocks only for the following operations: LostPets, PetsForSale).",
+      errors: [
+        new GraphQLError(
+          "Can’t perform GraphQL operation 'Pets' because no valid mocks were found (you provided an object that had mocks only for the following operations: LostPets, PetsForSale).",
+        ),
+      ],
     });
   });
 
-  it('returns error message with empty mock function', async () => {
+  it('returns GraphQLError with empty mock function', async () => {
     const mockApolloLink = new MockApolloLink(
       () => (null as unknown) as MockGraphQLResponse,
       schema,
@@ -65,8 +71,11 @@ describe('MockApolloLink', () => {
     });
 
     expect(result).toMatchObject({
-      message:
-        "Can’t perform GraphQL operation 'Pets' because no valid mocks were found (you provided a function that did not return a valid mock result)",
+      errors: [
+        new GraphQLError(
+          "Can’t perform GraphQL operation 'Pets' because no valid mocks were found (you provided a function that did not return a valid mock result)",
+        ),
+      ],
     });
   });
 
