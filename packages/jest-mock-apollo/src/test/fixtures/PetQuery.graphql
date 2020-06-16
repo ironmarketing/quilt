@@ -1,4 +1,4 @@
-query Pet {
+query PetQuery {
   pets {
     ...CatInfo
   }

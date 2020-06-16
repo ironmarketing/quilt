@@ -10,7 +10,7 @@ import {createMount} from '@shopify/react-testing';
 
 import unionOrIntersectionTypes from './fixtures/schema-unions-and-interfaces.json';
 import {
-  Pet as petQuery,
+  PetQuery as petQuery,
   PetMutation as petMutation,
 } from './fixtures/PetQuery.graphql';
 
@@ -83,23 +83,25 @@ async function waitToResolve(wrapper, graphQLClient = client) {
   await wrapper.act(() => Promise.all(graphQLClient.graphQLResults));
 }
 
+const PetQuery = {
+  pets: [
+    {
+      __typename: 'Cat',
+      name: 'Garfield',
+    },
+  ],
+};
+const PetMutation = ({variables: {name}}) => ({
+  pets: [
+    {
+      __typename: 'Cat',
+      name,
+    },
+  ],
+});
 const client = createGraphQLClient({
-  Pet: {
-    pets: [
-      {
-        __typename: 'Cat',
-        name: 'Garfield',
-      },
-    ],
-  },
-  PetMutation: ({variables: {name}}) => ({
-    pets: [
-      {
-        __typename: 'Cat',
-        name,
-      },
-    ],
-  }),
+  PetQuery,
+  PetMutation,
 });
 
 describe('jest-mock-apollo', () => {
@@ -110,7 +112,7 @@ describe('jest-mock-apollo', () => {
     await waitToResolve(somePage, client);
 
     expect(somePage).toContainReactText(
-      "GraphQL error: Can’t perform GraphQL operation 'Pet' because no mocks were set.",
+      "GraphQL error: Can’t perform GraphQL operation 'PetQuery' because no mocks were set.",
     );
   });
 
@@ -122,22 +124,15 @@ describe('jest-mock-apollo', () => {
 
       await waitToResolve(somePage, client);
 
-      const query = client.graphQLRequests.lastOperation('Pet');
+      const query = client.graphQLRequests.lastOperation('PetQuery');
 
-      expect(query).toMatchObject({operationName: 'Pet'});
+      expect(query).toMatchObject({operationName: 'PetQuery'});
       expect(somePage).toContainReactText('Garfield');
     });
 
     it('throws useful error when query is not mocked', async () => {
       const client = createGraphQLClient({
-        PetMutation: ({variables: {name}}) => ({
-          pets: [
-            {
-              __typename: 'Cat',
-              name,
-            },
-          ],
-        }),
+        PetMutation,
       });
       const somePage = mount(<SomePage />, {
         client,
@@ -146,7 +141,7 @@ describe('jest-mock-apollo', () => {
       await waitToResolve(somePage, client);
 
       expect(somePage).toContainReactText(
-        "GraphQL error: Can’t perform GraphQL operation 'Pet' because no valid mocks were found",
+        "GraphQL error: Can’t perform GraphQL operation 'PetQuery' because no valid mocks were found",
       );
     });
   });
@@ -168,14 +163,7 @@ describe('jest-mock-apollo', () => {
 
     it('throws useful error when mutation is not mocked', async () => {
       const client = createGraphQLClient({
-        Pet: {
-          pets: [
-            {
-              __typename: 'Cat',
-              name: 'Garfield',
-            },
-          ],
-        },
+        PetQuery,
       });
       const somePage = mount(<SomePage />, {
         client,
