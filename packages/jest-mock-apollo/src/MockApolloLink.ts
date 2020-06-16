@@ -62,7 +62,10 @@ export default class MockApolloLink extends ApolloLink {
         }
 
         result = normalizeError(message);
-      } else if (response instanceof Error) {
+      } else if (
+        response instanceof Error ||
+        response instanceof GraphQLError
+      ) {
         result = normalizeError(response);
       } else {
         try {
