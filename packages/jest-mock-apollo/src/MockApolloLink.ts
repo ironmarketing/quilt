@@ -38,7 +38,7 @@ export default class MockApolloLink extends ApolloLink {
             : mockForOperation;
       }
 
-      let result: ExecutionResult | Error;
+      let result: ExecutionResult;
 
       if (response == null) {
         let message = `Can’t perform GraphQL operation '${operationName}' because no valid mocks were found`;
@@ -61,14 +61,9 @@ export default class MockApolloLink extends ApolloLink {
             ' (you provided a function that did not return a valid mock result)';
         }
 
-        const error = new Error(message);
-        result = error;
-      } else if (response instanceof GraphQLError) {
-        result = {
-          errors: [response],
-        };
+        result = normalizeError(message);
       } else if (response instanceof Error) {
-        result = {errors: [new GraphQLError(response.message)]};
+        result = normalizeError(response);
       } else {
         try {
           result = {
@@ -79,7 +74,7 @@ export default class MockApolloLink extends ApolloLink {
             ),
           };
         } catch (error) {
-          result = error;
+          result = normalizeError(error);
         }
       }
 
@@ -165,4 +160,18 @@ function rootType(type: GraphQLType) {
   }
 
   return finalType;
+}
+
+function normalizeError(error: GraphQLError | Error | string) {
+  let graphQLError: GraphQLError;
+
+  if (error instanceof GraphQLError) {
+    graphQLError = error;
+  } else if (error instanceof Error) {
+    graphQLError = new GraphQLError(error.message);
+  } else {
+    graphQLError = new GraphQLError(error);
+  }
+
+  return {errors: [graphQLError]};
 }
