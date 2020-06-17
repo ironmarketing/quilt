@@ -11,6 +11,10 @@ and adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 - Mock client now returns more insightful error messages in cases where mocks are not present
 
+### Added
+
+- Optional config for `configureClient`, `createGraphQLClient`, and `MockApolloLink` to log errors found in mock GraphQL request execution
+
 ## [4.0.6] - 2020-03-13
 
 - Update dev dependencies from `react-apollo` to `@apollo/react-common` and `@apollo/react-hoc` ([#1321](https://github.com/Shopify/quilt/pull/1321))
