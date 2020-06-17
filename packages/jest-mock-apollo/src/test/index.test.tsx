@@ -24,6 +24,7 @@ const schema = buildSchema(schemaSrc);
 const createGraphQLClient = configureClient({
   schema,
   unionOrIntersectionTypes,
+  logErrors: true,
 });
 
 const mount = createMount<{client: ApolloClient<any>}, {}>({

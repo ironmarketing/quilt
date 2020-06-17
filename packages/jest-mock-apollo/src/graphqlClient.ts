@@ -15,6 +15,7 @@ export interface GraphQLClientConfig {
   unionOrIntersectionTypes?: any[];
   schema: GraphQLSchema;
   cacheOptions?: ApolloReducerConfig;
+  logErrors?: boolean;
 }
 
 export type MockGraphQLClient = ApolloClient<any> & {
@@ -34,8 +35,12 @@ export default function configureClient({
   unionOrIntersectionTypes = [],
   schema,
   cacheOptions = {},
+  logErrors = false,
 }: GraphQLClientConfig) {
-  return function createGraphQLClient(mock: GraphQLMock = defaultGraphQLMock) {
+  return function createGraphQLClient(
+    mock: GraphQLMock = defaultGraphQLMock,
+    clientLogErrors = logErrors,
+  ) {
     const cache = new InMemoryCache({
       fragmentMatcher: new IntrospectionFragmentMatcher({
         introspectionQueryResultData: {
@@ -47,7 +52,7 @@ export default function configureClient({
       ...cacheOptions,
       // see https://github.com/apollographql/apollo-client/issues/2512
     }) as any;
-    const mockLink = new MockApolloLink(mock, schema);
+    const mockLink = new MockApolloLink(mock, schema, clientLogErrors);
 
     const graphQLRequests = new Requests();
     const graphQLResults: Promise<any>[] = [];

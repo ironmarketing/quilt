@@ -16,7 +16,11 @@ import {compile, Field} from 'graphql-tool-utilities';
 import {GraphQLMock, MockGraphQLFunction} from './types';
 
 export default class MockApolloLink extends ApolloLink {
-  constructor(private mock: GraphQLMock, private schema: GraphQLSchema) {
+  constructor(
+    private mock: GraphQLMock,
+    private schema: GraphQLSchema,
+    private logErrors = false,
+  ) {
     super();
   }
 
@@ -81,9 +85,19 @@ export default class MockApolloLink extends ApolloLink {
         }
       }
 
+      // Log errors in execution, if any
+      this.logErrorResult(result);
+
       obs.next(result);
       obs.complete();
     });
+  }
+
+  private logErrorResult(result: ExecutionResult) {
+    if (this.logErrors && result.errors) {
+      const logger = console;
+      result.errors.forEach(error => logger.error(error.message));
+    }
   }
 }
 
