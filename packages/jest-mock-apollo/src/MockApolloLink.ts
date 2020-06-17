@@ -86,18 +86,14 @@ export default class MockApolloLink extends ApolloLink {
       }
 
       // Log errors in execution, if any
-      this.logErrorResult(result);
+      if (this.logErrors && result.errors) {
+        const logger = console;
+        result.errors.forEach(error => logger.error(error.message));
+      }
 
       obs.next(result);
       obs.complete();
     });
-  }
-
-  private logErrorResult(result: ExecutionResult) {
-    if (this.logErrors && result.errors) {
-      const logger = console;
-      result.errors.forEach(error => logger.error(error.message));
-    }
   }
 }
 
